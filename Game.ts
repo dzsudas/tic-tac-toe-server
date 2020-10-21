@@ -1,75 +1,108 @@
 import { v4 as uuid } from 'uuid';
 
+const TEAM_X = 'X';
+const TEAM_O = 'O';
+
 export class Game {
-    public id: any;
-    public state = [
+    public gameId: any;
+    public teamX: any = null;
+    public teamO: any = null;
+    public finished: boolean = false;
+    public teamWinner: 'X' | 'O' | null = null;
+    public activeTeam: 'X' | 'O' = TEAM_X;
+
+    public state: any = [
         [0, 0, 0],
         [0, 0, 0],
         [0, 0, 0]
     ];
 
-    private step = 0;
-    public user1Id: any;
-    public user2Id: any;
-    public currentPlayer = null;
-    public winner: any;
-
     constructor() {
-        this.id = uuid();
-        this.user1Id = uuid();
+        this.gameId = uuid();
     }
 
-    public joinUser() {
-        if (!this.user1Id) {
-            return this.user1Id = uuid()
-        } else if (!this.user2Id) {
-            this.currentPlayer = this.user1Id;
+    join(team: 'X' | 'O') {
+        if (team === 'X' && !this.teamX) {
+            return this.teamX = uuid()
+        } else if (team === 'O' && !this.teamO) {
+            return this.teamO = uuid()
+        }
 
-            return this.user2Id = uuid()
+        return false
+    }
+
+    isValidPlayer(playerId) {
+        return playerId === this.teamX || playerId === this.teamO;
+    }
+
+    move(playerId, x, y) {
+        if (this.finished) {
+            return false;
+        }
+
+        const team = playerId === this.teamX ? TEAM_X : playerId === this.teamO ? TEAM_O : null;
+
+        if (team !== this.activeTeam) {
+            console.log('Wrong Team trying to move')
+            return false;
+        }
+
+        if (this.state[x]?.[y] !== 0) {
+            console.log('Incorrect coordinates')
+            return false;
+        }
+
+        this.state[x][y] = team;
+        this.activeTeam = team === TEAM_X ? TEAM_O : TEAM_X;
+
+
+        if (this.isTeamWon(team)) {
+            this.finished = true;
+            this.teamWinner = team;
+        } else if (!this.hasMoves()) {
+            this.finished = true;
+        }
+
+        return true;
+    }
+
+    hasMoves() {
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (this.state[i][j] === 0) {
+                    return true;
+                }
+            }
         }
 
         return false;
     }
 
-    public isGameStarted() {
-        return !!this.currentPlayer;
-    }
-
-    public checkUserWon(userId) {
-        const code = userId === this.user1Id ? 1 : 2;
-
+    isTeamWon(team: 'X' | 'O') {
         for (let i = 0; i < 3; i++) {
-            if (this.state[i][0] === code && this.state[i][1] === code && this.state[i][2] === code) {
+            if (this.state[i][0] === team && this.state[i][1] === team && this.state[i][2] === team) {
                 return true; //columns
             }
 
-            if (this.state[0][i] === code && this.state[1][i] === code && this.state[2][i] === code) {
+            if (this.state[0][i] === team && this.state[1][i] === team && this.state[2][i] === team) {
                 return true; //rows
             }
         }
 
         //crosses
-        return ( this.state[0][0] === code && this.state[1][1] === code && this.state[2][2] === code ) ||
-            ( this.state[0][2] === code && this.state[1][1] === code && this.state[2][0] === code )
+        return ( this.state[0][0] === team && this.state[1][1] === team && this.state[2][2] === team ) ||
+            ( this.state[0][2] === team && this.state[1][1] === team && this.state[2][0] === team )
     }
 
-    public isGameFinished() {
-        return this.winner || this.step === 9;
-    }
-
-    public move(userId, x, y) {
-        if (x < 0 || x > 2 || y < 0 || y > 2 || userId !== this.currentPlayer || this.state[x][y]) return false;
-
-        this.state[x][y] = userId === this.user1Id ? 1 : 2;
-
-        this.step++;
-
-        if (this.checkUserWon(userId)) {
-            return this.winner = userId;
+    serialize() {
+        return {
+            state: this.state,
+            isGameReady: !!(this.teamO && this.teamX),
+            isTeamOReady: !!this.teamO,
+            isTeamXReady: !!this.teamX,
+            isGameFinished: this.finished,
+            winner: this.teamWinner,
+            activeTeam: this.activeTeam,
         }
-
-        this.currentPlayer = this.currentPlayer === this.user1Id ? this.user2Id : this.user1Id;
-
-        return true;
     }
 }
